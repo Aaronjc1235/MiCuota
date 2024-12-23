@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "959365234413",
+    "project_id": "micuota",
+    "storage_bucket": "micuota.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959365234413:android:ebfa5d2aa5462a4eb516e4",
+        "android_client_info": {
+          "package_name": "com.example.micuotaapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMs4RQh3yeugE28lgzC2b4xHljqdwN-AY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
