@@ -28,6 +28,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => RegisterScreen(),
         '/debt_list': (context) => DebtListScreen(userId: 'userId'), // Replace with dynamic user ID
         '/home': (context) => HomeScreen(),
+        '/add_debt': (context) => AddDebtScreen(userId: 'userId'),
       },
     );
   }

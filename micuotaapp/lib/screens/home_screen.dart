@@ -1,53 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/auth_service.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends StatelessWidget {
+  final String userEmail;
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+  const HomeScreen({Key? key, required this.userEmail}) : super(key: key);
 
-class _HomeScreenState extends State<HomeScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  User? _currentUser;
-  String? _userEmail;
-  List<Map<String, dynamic>> _debts = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _getCurrentUser();
-    _fetchDebts();
+  void _navigateToDebtList(BuildContext context) {
+    Navigator.pushNamed(context, '/debt_list');
   }
 
-  Future<void> _getCurrentUser() async {
-    setState(() {
-      _currentUser = _auth.currentUser;
-      _userEmail = _currentUser?.email ?? "Usuario desconocido";
-    });
+  void _navigateToAddDebt(BuildContext context) {
+    Navigator.pushNamed(context, '/add_debt');
   }
 
-  Future<void> _fetchDebts() async {
-    if (_currentUser != null) {
-      final debtsCollection = FirebaseFirestore.instance
-          .collection('users')
-          .doc(_currentUser!.uid)
-          .collection('debts');
-
-      final querySnapshot = await debtsCollection.get();
-      setState(() {
-        _debts = querySnapshot.docs
-            .map((doc) => {"id": doc.id, ...doc.data() as Map<String, dynamic>})
-            .toList();
-      });
-    }
+  void _navigateToProfile(BuildContext context) {
+    Navigator.pushNamed(context, '/profile'); // Ruta para la pantalla de perfil
   }
 
-  Future<void> _logout() async {
-    await _auth.signOut();
+  void _logout(BuildContext context) async {
+    await AuthService().logout();
     Navigator.pushReplacementNamed(context, '/login');
   }
 
@@ -55,61 +27,80 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Bienvenido"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchDebts, // Refrescar datos
-          ),
-        ],
+        title: const Text("Inicio"),
+        automaticallyImplyLeading: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              "Hola, $_userEmail",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              "Bienvenido, $userEmail",
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Deudas:",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            _debts.isEmpty
-                ? const Text("No tienes deudas registradas.")
-                : Expanded(
+            Expanded(
               child: ListView.builder(
-                itemCount: _debts.length,
+                itemCount: 5, // Número de deudas simuladas
                 itemBuilder: (context, index) {
-                  final debt = _debts[index];
                   return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
                     child: ListTile(
-                      title: Text(debt['name'] ?? "Sin nombre"),
-                      subtitle: Text(
-                          "Cuotas restantes: ${(debt['totalInstallments'] ?? 0) - (debt['paidInstallments'] ?? 0)}\nPróxima fecha: ${debt['nextPaymentDate'] ?? 'No registrada'}"),
+                      leading: const Icon(Icons.monetization_on),
+                      title: Text("Deuda ${index + 1}"),
+                      subtitle: Text("Monto: \$${(index + 1) * 100}"),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () {
+                        // Acción al tocar una deuda (puedes personalizar)
+                        _navigateToDebtList(context);
+                      },
                     ),
                   );
                 },
               ),
             ),
-            const SizedBox(height: 20),
-            Center(
-              child: ElevatedButton(
-                onPressed: _logout,
-                child: const Text("Cerrar Sesión"),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: () => _navigateToAddDebt(context),
+              icon: const Icon(Icons.add),
+              label: const Text("Agregar Nueva Deuda"),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, '/add_debt').then((_) => _fetchDebts());
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Inicio',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.logout),
+            label: 'Cerrar Sesión',
+          ),
+        ],
+        onTap: (index) {
+          switch (index) {
+            case 0:
+            // Ya estás en la pantalla de inicio, no hagas nada
+              break;
+            case 1:
+              _navigateToProfile(context);
+              break;
+            case 2:
+              _logout(context);
+              break;
+          }
         },
-        child: const Icon(Icons.add),
-        tooltip: "Agregar Deuda",
       ),
     );
   }
