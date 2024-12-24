@@ -1,19 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
-import 'screens/add_debt_screen.dart';
-import 'services/auth_service.dart';
-import 'screens/debt_list_screen.dart';
-import 'screens/home_screen.dart';
+import 'package:micuotaapp/screens/home_screen.dart';
+import 'package:micuotaapp/screens/login_screen.dart';
+import 'package:micuotaapp/screens/profile_screen.dart';
+import 'package:micuotaapp/screens/register_screen.dart';
+import 'package:micuotaapp/screens/add_debt_screen.dart'; // Importa AddDebtScreen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,148 +24,44 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      initialRoute: '/login',
+      home: const AuthChecker(), // Nueva clase para gestionar autenticación
       routes: {
-        '/login': (context) => LoginScreen(),
-        '/register': (context) => RegisterScreen(),
-        '/debt_list': (context) => DebtListScreen(userId: 'userId'), // Replace with dynamic user ID
-        '/home': (context) => HomeScreen(),
-        '/add_debt': (context) => AddDebtScreen(userId: 'userId'),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => HomeScreen(
+          userId: ModalRoute.of(context)?.settings.arguments as String,
+        ),
+        '/profile': (context) => ProfileScreen(
+          userId: ModalRoute.of(context)?.settings.arguments as String,
+        ),
+        '/add_debt': (context) => AddDebtScreen(
+          userId: ModalRoute.of(context)?.settings.arguments as String,
+        ), // Ruta para AddDebtScreen
       },
     );
   }
 }
-class LoginScreen extends StatefulWidget {
-  @override
-  _LoginScreenState createState() => _LoginScreenState();
-}
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  void _login() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    final user = await AuthService().login(email, password);
-    if (user != null) {
-      Navigator.pushReplacementNamed(context, "/home");
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Inicio de sesión fallido")),
-      );
-    }
-  }
+class AuthChecker extends StatelessWidget {
+  const AuthChecker({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Inicio de Sesión")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: "Correo electrónico"),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: "Contraseña"),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _login,
-              child: Text("Iniciar Sesión"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pushNamed(context, "/register");
-              },
-              child: Text("¿No tienes cuenta? Regístrate"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-class RegisterScreen extends StatefulWidget {
-  @override
-  _RegisterScreenState createState() => _RegisterScreenState();
-}
-
-class _RegisterScreenState extends State<RegisterScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  void _register() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    final user = await AuthService().register(email, password);
-    if (user != null) {
-      Navigator.pop(context); // Vuelve a la pantalla de inicio de sesión
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Registro fallido")),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Registro")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: "Correo electrónico"),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: "Contraseña"),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _register,
-              child: Text("Registrarse"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final user = AuthService().currentUser;
-    return Scaffold(
-      appBar: AppBar(title: Text("Bienvenido")),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("Hola, ${user?.email ?? 'Usuario'}"),
-            ElevatedButton(
-              onPressed: () async {
-                await AuthService().logout();
-                Navigator.pushReplacementNamed(context, "/login");
-              },
-              child: Text("Cerrar Sesión"),
-            ),
-          ],
-        ),
-      ),
+        if (snapshot.hasData) {
+          // Si hay un usuario autenticado, redirige a HomeScreen
+          return HomeScreen(userId: snapshot.data!.uid);
+        } else {
+          // Si no hay usuario autenticado, redirige a LoginScreen
+          return const LoginScreen();
+        }
+      },
     );
   }
 }
