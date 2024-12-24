@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -6,6 +7,19 @@ class AuthService {
   // Constructor para configurar el idioma
   AuthService() {
     _auth.setLanguageCode('es'); // Configura el idioma a español
+  }
+
+  // Función para crear un documento en Firestore para el usuario
+  Future<void> createUserDocument(String userId, String email) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+        'email': email,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      print("Documento creado en Firestore para el usuario: $userId");
+    } catch (e) {
+      print("Error al crear documento en Firestore: $e");
+    }
   }
 
   // Inicio de sesión anónimo
@@ -28,6 +42,8 @@ class AuthService {
       );
       if (userCredential.user != null) {
         print("Usuario registrado exitosamente: ${userCredential.user!.uid}");
+        // Crear documento en Firestore
+        await createUserDocument(userCredential.user!.uid, email);
         return userCredential.user;
       } else {
         print("Error: Usuario no fue registrado correctamente");
@@ -91,8 +107,6 @@ class AuthService {
       return null;
     }
   }
-
-
 
   // Cerrar sesión
   Future<void> logout() async {
