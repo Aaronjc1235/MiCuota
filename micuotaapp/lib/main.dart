@@ -6,6 +6,8 @@ import 'package:micuotaapp/screens/login_screen.dart';
 import 'package:micuotaapp/screens/profile_screen.dart';
 import 'package:micuotaapp/screens/register_screen.dart';
 import 'package:micuotaapp/screens/add_debt_screen.dart'; // Importa AddDebtScreen
+import 'package:micuotaapp/screens/debtors_screen.dart' as debtors; // Usa alias para evitar conflicto
+import 'package:micuotaapp/screens/add_debtor_screen.dart' as add_debtor; // Usa alias para evitar conflicto
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +38,13 @@ class MyApp extends StatelessWidget {
         ),
         '/add_debt': (context) => AddDebtScreen(
           userId: ModalRoute.of(context)?.settings.arguments as String,
-        ), // Ruta para AddDebtScreen
+        ),
+        '/debtors': (context) => debtors.DebtorsScreen(
+          userId: ModalRoute.of(context)?.settings.arguments as String,
+        ),
+        '/add_debtor': (context) => add_debtor.AddDebtorScreen(
+          userId: ModalRoute.of(context)?.settings.arguments as String,
+        ),
       },
     );
   }

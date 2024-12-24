@@ -21,18 +21,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     switch (index) {
       case 0: // Mantenerse en la pantalla de inicio
+        Navigator.pushReplacementNamed(context, '/home', arguments: widget.userId);
         break;
       case 1: // Redirigir al perfil
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProfileScreen(userId: widget.userId),
-          ),
-        );
+        Navigator.pushReplacementNamed(context, '/profile', arguments: widget.userId);
         break;
-      case 2: // Lógica para cerrar sesión
-        FirebaseAuth.instance.signOut();
-        Navigator.pushReplacementNamed(context, '/login');
+      case 2: // Redirigir a la pantalla de deudores
+        Navigator.pushReplacementNamed(context, '/debtors', arguments: widget.userId);
         break;
     }
 
@@ -41,16 +36,39 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  String _formatFecha(dynamic fecha) {
+    if (fecha is Timestamp) {
+      return DateFormat('dd/MM/yyyy').format(fecha.toDate());
+    } else if (fecha is String) {
+      try {
+        return DateFormat('dd/MM/yyyy').format(DateTime.parse(fecha));
+      } catch (e) {
+        return "Fecha no válida";
+      }
+    } else {
+      return "Fecha no disponible";
+    }
+  }
+
   Future<void> _pagarCuota(String debtId, Map<String, dynamic> deuda) async {
     final currentDate = DateTime.now();
+
+    final DateTime fechaDePago = deuda['fechaDePago'] is Timestamp
+        ? (deuda['fechaDePago'] as Timestamp).toDate()
+        : DateTime.parse(deuda['fechaDePago']);
+
     final nextPaymentDate = DateTime(
       currentDate.year,
       currentDate.month + 1,
-      DateTime.parse(deuda['fechaDePago']).day,
+      fechaDePago.day,
     );
 
+    final DateTime ultimoPago = deuda['ultimoPago'] is Timestamp
+        ? (deuda['ultimoPago'] as Timestamp).toDate()
+        : DateTime.tryParse(deuda['ultimoPago'] ?? '1970-01-01') ?? DateTime(1970);
+
     if (DateFormat('yyyy-MM').format(currentDate) ==
-        DateFormat('yyyy-MM').format(DateTime.parse(deuda['ultimoPago'] ?? '1970-01-01'))) {
+        DateFormat('yyyy-MM').format(ultimoPago)) {
       return;
     }
 
@@ -61,23 +79,30 @@ class _HomeScreenState extends State<HomeScreen> {
         .doc(debtId)
         .update({
       'totalPagadas': deuda['totalPagadas'] + 1,
-      'fechaDePago': nextPaymentDate.toIso8601String(),
-      'ultimoPago': currentDate.toIso8601String(),
+      'fechaDePago': Timestamp.fromDate(nextPaymentDate),
+      'ultimoPago': Timestamp.now(),
     });
   }
 
   Future<void> _deshacerPago(String debtId, Map<String, dynamic> deuda) async {
     final currentDate = DateTime.now();
-    final lastPaymentDate = DateTime.parse(deuda['ultimoPago'] ?? '1970-01-01');
+
+    final DateTime lastPaymentDate = deuda['ultimoPago'] is Timestamp
+        ? (deuda['ultimoPago'] as Timestamp).toDate()
+        : DateTime.tryParse(deuda['ultimoPago'] ?? '1970-01-01') ?? DateTime(1970);
 
     if (currentDate.difference(lastPaymentDate).inMinutes > 30) {
       return;
     }
 
+    final DateTime fechaDePago = deuda['fechaDePago'] is Timestamp
+        ? (deuda['fechaDePago'] as Timestamp).toDate()
+        : DateTime.parse(deuda['fechaDePago']);
+
     final previousPaymentDate = DateTime(
-      lastPaymentDate.year,
-      lastPaymentDate.month - 1,
-      DateTime.parse(deuda['fechaDePago']).day,
+      fechaDePago.year,
+      fechaDePago.month - 1,
+      fechaDePago.day,
     );
 
     await FirebaseFirestore.instance
@@ -87,19 +112,28 @@ class _HomeScreenState extends State<HomeScreen> {
         .doc(debtId)
         .update({
       'totalPagadas': deuda['totalPagadas'] - 1,
-      'fechaDePago': previousPaymentDate.toIso8601String(),
+      'fechaDePago': Timestamp.fromDate(previousPaymentDate),
       'ultimoPago': null,
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final numberFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$');
+    final numberFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Inicio"),
+        title: const Text("MiCuota"),
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              FirebaseAuth.instance.signOut();
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -121,6 +155,12 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               final deuda = deudas[index].data() as Map<String, dynamic>;
               final debtId = deudas[index].id;
+
+              final DateTime lastPaymentDate = deuda['ultimoPago'] is Timestamp
+                  ? (deuda['ultimoPago'] as Timestamp).toDate()
+                  : DateTime.tryParse(deuda['ultimoPago'] ?? '1970-01-01') ?? DateTime(1970);
+
+              final bool canUndo = DateTime.now().difference(lastPaymentDate).inMinutes <= 30;
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -149,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               "Cuotas: ${deuda['totalPagadas']}/${deuda['totalCuotas']}",
                             ),
                             Text(
-                              "Próxima fecha: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(deuda['fechaDePago']))}",
+                              "Próxima fecha: ${_formatFecha(deuda['fechaDePago'])}",
                             ),
                           ],
                         ),
@@ -161,10 +201,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: const Icon(Icons.add, color: Colors.green),
                             onPressed: () => _pagarCuota(debtId, deuda),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.undo, color: Colors.red),
-                            onPressed: () => _deshacerPago(debtId, deuda),
-                          ),
+                          if (canUndo)
+                            IconButton(
+                              icon: const Icon(Icons.undo, color: Colors.red),
+                              onPressed: () => _deshacerPago(debtId, deuda),
+                            ),
                         ],
                       ),
                     ],
@@ -177,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pushNamed(context, '/add_debt', arguments: widget.userId);
+          Navigator.pushReplacementNamed(context, '/add_debt', arguments: widget.userId);
         },
         child: const Icon(Icons.add),
       ),
@@ -194,8 +235,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Perfil',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.logout),
-            label: 'Cerrar Sesión',
+            icon: Icon(Icons.people),
+            label: 'Deudores',
           ),
         ],
       ),

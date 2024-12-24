@@ -29,10 +29,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final user = await AuthService().register(email, password);
       if (user != null) {
-        // Crear el documento del usuario con la subcolección `debts`
+        // Crear el documento del usuario
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'email': email,
           'nombre': name,
+          'fechaRegistro': Timestamp.now(), // Agregamos fecha de registro como Timestamp
         });
 
         // Crear la subcolección `debts` con un documento inicial
@@ -41,17 +42,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
             .doc(user.uid)
             .collection('debts')
             .add({
-          'fechaDePago': Timestamp.now(),
+          'fechaDePago': Timestamp.now(), // Aseguramos que sea Timestamp
           'monto': 0,
           'nombre': 'Deuda inicial',
           'totalCuotas': 0,
           'totalPagadas': 0,
         });
 
+        // Crear la subcolección `debtors` con un documento inicial
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('debtors')
+            .add({
+          'nombre': 'Juan Pérez',
+          'monto': 50000,
+          'pagado': 0,
+          'fechaDeCreacion': Timestamp.now(), // Aseguramos que sea Timestamp
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Registro exitoso. Por favor, inicia sesión.")),
+          const SnackBar(content: Text("Registro exitoso. Iniciando sesión...")),
         );
-        Navigator.pop(context); // Vuelve a la pantalla de inicio de sesión
+
+        // Iniciar sesión automáticamente
+        Navigator.pushReplacementNamed(context, '/home', arguments: user.uid);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Registro fallido: Usuario no creado.")),

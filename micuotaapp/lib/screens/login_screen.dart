@@ -29,6 +29,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _navigateToRegister() {
+    Navigator.pushNamed(context, '/register');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,6 +54,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ElevatedButton(
               onPressed: _login,
               child: const Text("Iniciar sesión"),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: _navigateToRegister,
+              child: const Text("¿No tienes cuenta? Regístrate aquí"),
             ),
           ],
         ),

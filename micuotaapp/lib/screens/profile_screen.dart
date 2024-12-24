@@ -98,6 +98,30 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      FirebaseAuth.instance.signOut();
+                      Navigator.pushReplacementNamed(context, '/login');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade800,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 50,
+                        vertical: 15,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cerrar Sesión',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -116,8 +140,8 @@ class ProfileScreen extends StatelessWidget {
             label: 'Perfil',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.logout),
-            label: 'Cerrar sesión',
+            icon: Icon(Icons.people),
+            label: 'Deudores',
           ),
         ],
         onTap: (index) {
@@ -125,9 +149,7 @@ class ProfileScreen extends StatelessWidget {
             // Reemplaza la pantalla actual para evitar apilamiento
             Navigator.pushReplacementNamed(context, '/home', arguments: userId);
           } else if (index == 2) {
-            // Lógica para cerrar sesión
-            FirebaseAuth.instance.signOut();
-            Navigator.pushReplacementNamed(context, '/login');
+            Navigator.pushNamed(context, '/debtors', arguments: userId);
           }
         },
       ),
