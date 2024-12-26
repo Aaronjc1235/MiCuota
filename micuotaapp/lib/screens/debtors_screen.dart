@@ -29,8 +29,12 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
         Navigator.pushReplacementNamed(context, '/profile', arguments: widget.userId);
         break;
       case 2:
-        Navigator.pushReplacementNamed(context, '/debtors', arguments: widget.userId);
+      // No hacer nada porque ya estamos en esta página
         break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Ruta no válida")),
+        );
     }
 
     setState(() {
@@ -63,6 +67,10 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
             },
           ),
           actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar"),
+            ),
             TextButton(
               onPressed: () async {
                 double abono = double.tryParse(_abonoController.text.replaceAll('.', '')) ?? 0;
@@ -98,10 +106,6 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
               },
               child: const Text("Aceptar"),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar"),
-            ),
           ],
         );
       },
@@ -129,6 +133,7 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
             .collection('users')
             .doc(widget.userId)
             .collection('debtors')
+            .orderBy('nombre')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

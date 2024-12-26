@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -14,25 +13,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0; // Índice inicial para la pestaña "Inicio"
+  int _selectedIndex = 0;
 
   void _onItemTapped(int index) {
-    if (_selectedIndex == index) return; // Evitar recargar la misma pestaña
+    if (_selectedIndex == index) return;
 
     switch (index) {
-      case 0: // Mantenerse en la pantalla de inicio
-        Navigator.pushReplacementNamed(context, '/home', arguments: widget.userId);
+      case 0:
         break;
-      case 1: // Redirigir al perfil
-        Navigator.pushReplacementNamed(context, '/profile', arguments: widget.userId);
+      case 1:
+        Navigator.pushNamed(context, '/profile', arguments: widget.userId);
         break;
-      case 2: // Redirigir a la pantalla de deudores
-        Navigator.pushReplacementNamed(context, '/debtors', arguments: widget.userId);
+      case 2:
+        Navigator.pushNamed(context, '/debtors', arguments: widget.userId);
         break;
     }
 
     setState(() {
-      _selectedIndex = index; // Actualizar índice seleccionado
+      _selectedIndex = index;
     });
   }
 
@@ -69,6 +67,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (DateFormat('yyyy-MM').format(currentDate) ==
         DateFormat('yyyy-MM').format(ultimoPago)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Solo se puede pagar una cuota al mes.")),
+      );
       return;
     }
 
@@ -82,6 +83,15 @@ class _HomeScreenState extends State<HomeScreen> {
       'fechaDePago': Timestamp.fromDate(nextPaymentDate),
       'ultimoPago': Timestamp.now(),
     });
+
+    if (deuda['totalPagadas'] + 1 >= deuda['totalCuotas']) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .collection('debts')
+          .doc(debtId)
+          .delete();
+    }
   }
 
   Future<void> _deshacerPago(String debtId, Map<String, dynamic> deuda) async {
@@ -92,6 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
         : DateTime.tryParse(deuda['ultimoPago'] ?? '1970-01-01') ?? DateTime(1970);
 
     if (currentDate.difference(lastPaymentDate).inMinutes > 30) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No se puede deshacer el pago después de 30 minutos.")),
+      );
       return;
     }
 
@@ -115,6 +128,18 @@ class _HomeScreenState extends State<HomeScreen> {
       'fechaDePago': Timestamp.fromDate(previousPaymentDate),
       'ultimoPago': null,
     });
+  }
+
+  Future<void> _eliminarDeuda(String debtId) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .collection('debts')
+        .doc(debtId)
+        .delete();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Deuda eliminada correctamente.")),
+    );
   }
 
   @override
@@ -150,6 +175,12 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           final deudas = snapshot.data!.docs;
+          deudas.sort((a, b) {
+            final nombreA = (a.data() as Map<String, dynamic>)['nombre']?.toString() ?? '';
+            final nombreB = (b.data() as Map<String, dynamic>)['nombre']?.toString() ?? '';
+            return nombreA.compareTo(nombreB);
+          });
+
           return ListView.builder(
             itemCount: deudas.length,
             itemBuilder: (context, index) {
@@ -163,39 +194,43 @@ class _HomeScreenState extends State<HomeScreen> {
               final bool canUndo = DateTime.now().difference(lastPaymentDate).inMinutes <= 30;
 
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                margin: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.monetization_on, size: 40),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              deuda['nombre'],
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            deuda['nombre'],
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'Eliminar') {
+                                _eliminarDeuda(debtId);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'Eliminar',
+                                child: Text('Eliminar'),
                               ),
-                            ),
-                            Text(
-                              "Monto: ${numberFormat.format(deuda['monto'])}",
-                            ),
-                            Text(
-                              "Cuotas: ${deuda['totalPagadas']}/${deuda['totalCuotas']}",
-                            ),
-                            Text(
-                              "Próxima fecha: ${_formatFecha(deuda['fechaDePago'])}",
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 8),
+                      Text("Monto: ${numberFormat.format(deuda['monto'])}"),
+                      Text("Cuotas: ${deuda['totalPagadas']}/${deuda['totalCuotas']}"),
+                      Text("Próxima fecha: ${_formatFecha(deuda['fechaDePago'])}"),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.add, color: Colors.green),
@@ -218,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pushReplacementNamed(context, '/add_debt', arguments: widget.userId);
+          Navigator.pushNamed(context, '/add_debt', arguments: widget.userId);
         },
         child: const Icon(Icons.add),
       ),
