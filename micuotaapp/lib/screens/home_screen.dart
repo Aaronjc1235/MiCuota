@@ -131,15 +131,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _eliminarDeuda(String debtId) async {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
-        .collection('debts')
-        .doc(debtId)
-        .delete();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Deuda eliminada correctamente.")),
-    );
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .collection('debts')
+          .doc(debtId)
+          .delete();
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Deuda eliminada correctamente.")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error al eliminar la deuda.")),
+      );
+    }
   }
 
   @override
@@ -165,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
             .collection('users')
             .doc(widget.userId)
             .collection('debts')
-            .snapshots(),
+            .snapshots(includeMetadataChanges: true),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

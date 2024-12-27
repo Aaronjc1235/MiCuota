@@ -9,6 +9,7 @@ import 'package:micuotaapp/screens/add_debt_screen.dart'; // Importa AddDebtScre
 import 'package:micuotaapp/screens/debtors_screen.dart' as debtors; // Usa alias para evitar conflicto
 import 'package:micuotaapp/screens/add_debtor_screen.dart' as add_debtor; // Usa alias para evitar conflicto
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
