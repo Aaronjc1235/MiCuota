@@ -11,7 +11,6 @@ class PaidDebtorsScreen extends StatelessWidget {
     return DateFormat('dd/MM/yyyy').format(fecha.toDate());
   }
 
-  // Función para mostrar el historial de abonos
   Future<void> _mostrarHistorialAbonos(BuildContext context, String debtorId, String nombreDeudor) async {
     showDialog(
       context: context,
@@ -58,7 +57,6 @@ class PaidDebtorsScreen extends StatelessWidget {
                         return const Center(child: Text("No hay abonos registrados."));
                       }
 
-                      // Sumar todos los abonos
                       double totalAbonos = 0;
                       for (var abono in docs) {
                         totalAbonos += (abono['monto'] as num).toDouble();
@@ -105,7 +103,6 @@ class PaidDebtorsScreen extends StatelessWidget {
     );
   }
 
-  // Función para eliminar historial de abonos
   Future<void> _eliminarHistorialAbonos(BuildContext context, String debtorId) async {
     showDialog(
       context: context,
@@ -156,7 +153,6 @@ class PaidDebtorsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Historial de Pagados")),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -183,7 +179,6 @@ class PaidDebtorsScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final pagado = docs[index].data() as Map<String, dynamic>;
               final debtorId = docs[index].id;
-              final double monto = double.tryParse(pagado['monto'].toString()) ?? 0.0;
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -193,7 +188,7 @@ class PaidDebtorsScreen extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    "Fecha: ${_formatFecha(pagado['fecha'])}", // Solo la fecha
+                    "Fecha: ${_formatFecha(pagado['fecha'])}",
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

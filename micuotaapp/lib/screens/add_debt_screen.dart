@@ -77,67 +77,163 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Agregar Deuda")),
+      backgroundColor: const Color(0xFF1B1919),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _nombreController,
-              decoration: const InputDecoration(labelText: "Nombre de la deuda"),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _montoController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Monto"),
-              onChanged: (value) {
-                // Formatea el monto mientras se escribe
-                final newText = value.replaceAll('.', ''); // Elimina puntos existentes
-                if (newText.isNotEmpty) {
-                  setState(() {
-                    _montoController.value = TextEditingValue(
-                      text: _numberFormat.format(int.parse(newText)),
-                      selection: TextSelection.collapsed(offset: _numberFormat.format(int.parse(newText)).length),
-                    );
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _totalCuotasController,
-              decoration: const InputDecoration(labelText: "Número total de cuotas"),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _totalPagadasController,
-              decoration: const InputDecoration(labelText: "Número de cuotas pagadas"),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _fechaDePago == null
-                        ? "Selecciona la fecha de pago"
-                        : "Fecha de pago: ${_fechaDePago!.toLocal()}".split(' ')[0],
+        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1CC0C6),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 20,
+                    child: const Text(
+                      "Ingresa tu Deuda",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 44,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    child: Image.asset(
+                      'lib/assets/images/3dicons-wallet-iso-color.png',
+                      height: 400,
+                      alignment: Alignment.bottomCenter,
+                    ),
+                  ),
+                ],
+              ),
+              TextField(
+                controller: _nombreController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: "Nombre de la deuda",
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white70),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF0D7377)),
+                    borderRadius: BorderRadius.circular(10.0),
                   ),
                 ),
-                TextButton(
-                  onPressed: () => _seleccionarFecha(context),
-                  child: const Text("Seleccionar Fecha"),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _montoController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: "Monto",
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white70),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF0D7377)),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _guardarDeuda,
-              child: const Text("Guardar"),
-            ),
-          ],
+                onChanged: (value) {
+                  // Formatea el monto mientras se escribe
+                  final newText = value.replaceAll('.', ''); // Elimina puntos existentes
+                  if (newText.isNotEmpty) {
+                    setState(() {
+                      _montoController.value = TextEditingValue(
+                        text: _numberFormat.format(int.parse(newText)),
+                        selection: TextSelection.collapsed(offset: _numberFormat.format(int.parse(newText)).length),
+                      );
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _totalCuotasController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: "Número total de cuotas",
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white70),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF0D7377)),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _totalPagadasController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: "Número de cuotas pagadas",
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white70),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF0D7377)),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _fechaDePago == null
+                          ? "Selecciona la fecha de pago"
+                          : "Fecha de pago: ${_fechaDePago!.toLocal()}".split(' ')[0],
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: const Color(0xFF0D7377)),
+                    onPressed: () => _seleccionarFecha(context),
+                    child: const Text("Seleccionar Fecha"),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _guardarDeuda,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1CC0C6),
+                    padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                  ),
+                  child: const Text("Guardar", style: TextStyle(fontSize: 16.0, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

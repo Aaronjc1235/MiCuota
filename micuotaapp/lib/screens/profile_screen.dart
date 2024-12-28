@@ -13,8 +13,9 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String? _selectedImage;
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
 
-  // Lista de imágenes de perfil locales
   final List<String> _profileImages = [
     'lib/assets/images/avatar1.png',
     'lib/assets/images/avatar2.png',
@@ -39,6 +40,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'lib/assets/images/avatar22.png',
     'lib/assets/images/avatar23.png',
   ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _searchUsers(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+      });
+      return;
+    }
+
+    try {
+      final result = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nombre', isGreaterThanOrEqualTo: query)
+          .where('nombre', isLessThanOrEqualTo: query + '\uf8ff')
+          .get();
+
+      setState(() {
+        _searchResults = result.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['userId'] = doc.id;
+          return data;
+        }).toList();
+      });
+      _showSearchResultsDialog(); // Añade esta línea
+    } catch (e) {
+      print("Error en búsqueda: $e");
+    }
+  }
+  void _showSearchResultsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Resultados de la búsqueda',
+                style: TextStyle(
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              _searchResults.isEmpty
+                  ? const Text('No se encontraron usuarios.')
+                  : ListView.builder(
+                shrinkWrap: true,
+                itemCount: _searchResults.length,
+                itemBuilder: (context, index) {
+                  final user = _searchResults[index];
+                  return ListTile(
+                    title: Text(user['nombre'] ?? 'Sin nombre'),
+                    subtitle: Text(user['email'] ?? 'Sin correo'),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.person_add, color: Colors.blue),
+                      onPressed: () {
+                        _sendFriendRequest(user['userId']);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16.0),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendFriendRequest(String toUserId) async {
+    final fromUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    await FirebaseFirestore.instance.collection('friend_requests').add({
+      'fromUserId': fromUserId,
+      'toUserId': toUserId,
+      'status': 'pending',
+    });
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(toUserId)
+        .update({
+      'pendingRequests': FieldValue.arrayUnion([widget.userId]),
+    });
+
+    setState(() {
+      _searchResults.removeWhere((user) => user['userId'] == toUserId);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Solicitud enviada')),
+    );
+  }
 
   void _showImageSelectionDialog() {
     showDialog(
@@ -78,10 +189,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _selectedImage = imagePath;
                           });
                           Navigator.pop(context);
-                          // Actualizamos la imagen en Firestore también
-                          FirebaseFirestore.instance.collection('users').doc(widget.userId).update({
-                            'profileImage': _selectedImage,
-                          });
+                          FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(widget.userId)
+                              .update({'profileImage': _selectedImage});
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -113,172 +224,237 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildSearchField() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Buscar usuarios...',
+                hintStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.search, color: Colors.white),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(color: const Color(0xFF1CC0C6), width: 2),
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () => _searchUsers(_searchController.text),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(widget.userId).get(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1B1919),
+        ),
+        child: Column(
+          children: [
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(widget.userId)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (snapshot.hasError) {
-            return const Center(child: Text('Error al cargar los datos.'));
-          }
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Error al cargar los datos.'));
+                }
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('No se encontraron datos del usuario.'));
-          }
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const Center(child: Text('No se encontraron datos del usuario.'));
+                }
 
-          final userData = snapshot.data!.data() as Map<String, dynamic>;
-          final String userName = userData['nombre'] ?? 'Nombre no disponible';
-          final String userEmail = userData['email'] ?? 'Correo no disponible';
-          _selectedImage = userData['profileImage'] ?? 'lib/assets/images/avatar1.png';
+                final userData = snapshot.data!.data() as Map<String, dynamic>;
+                final String userName = userData['nombre'] ?? 'Nombre no disponible';
+                final String userLastName = userData['apellido'] ?? 'Apellido no disponible';
+                final String userNickname = userData['nickName'] ?? 'Apodo no disponible';
+                final int contacts = userData['contacts'] ?? 0;
+                _selectedImage = userData['profileImage'] ?? 'lib/assets/images/avatar1.png';
 
-          return Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFFA726),
-                  Color(0xFFFF7043),
-                ],
-              ),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      _showImageSelectionDialog();
-                    },
-                    child: Stack(
+                return Column(
+                  children: [
+                    Stack(
                       children: [
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 3,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 100),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1CC0C6),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
                             ),
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              _selectedImage!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.white,
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 80,
-                                    color: Colors.orange,
+                            child: Column(
+                              children: [
+                                const SizedBox(height: 60),
+                                Text(
+                                  '$userName $userLastName',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
                                   ),
-                                );
-                              },
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '@: $userNickname',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 20),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                    children: [
+                                      _buildStatColumn(
+                                          'CONTACTOS', contacts.toString()),
+                                      _buildStatColumn('WISHED', '271'),
+                                      _buildStatColumn('LIKES', '12K'),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                         Positioned(
-                          bottom: 0,
+                          top: 50,
+                          left: 0,
                           right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFFF7043),
-                                width: 2,
+                          child: GestureDetector(
+                            onTap: _showImageSelectionDialog,
+                            child: Center(
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: 100,
+                                    height: 100,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 4),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 5),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: Image.asset(
+                                        _selectedImage!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.white,
+                                            child: const Icon(
+                                              Icons.person,
+                                              size: 60,
+                                              color: Color(0xFF1CC0C6),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: const Color(0xFF0D7377),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.edit,
+                                        size: 20,
+                                        color: Color(0xFF0D7377),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            child: const Icon(
-                              Icons.edit,
-                              size: 20,
-                              color: Color(0xFFFF7043),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    userEmail,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      FirebaseAuth.instance.signOut();
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade800,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 50,
-                        vertical: 15,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: const Text(
-                      'Cerrar Sesión',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                    const SizedBox(height: 20),
+                    _buildSearchField(),
+                  ],
+                );
+              },
             ),
-          );
-        },
+          ],
+        ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Inicio',
+    );
+  }
+
+  Widget _buildStatColumn(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Perfil',
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Deudores',
-          ),
-        ],
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/home', arguments: widget.userId);
-          } else if (index == 2) {
-            Navigator.pushNamed(context, '/debtors', arguments: widget.userId);
-          }
-        },
-      ),
+        ),
+      ],
     );
   }
 }

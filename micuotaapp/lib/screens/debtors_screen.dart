@@ -13,33 +13,8 @@ class DebtorsScreen extends StatefulWidget {
 }
 
 class _DebtorsScreenState extends State<DebtorsScreen> {
-  int _selectedIndex = 2;
-
   String _formatFecha(Timestamp fecha) {
     return DateFormat('dd/MM/yyyy').format(fecha.toDate());
-  }
-
-  void _onItemTapped(int index) {
-    if (_selectedIndex == index) return;
-
-    switch (index) {
-      case 0:
-        Navigator.pushNamed(context, '/home', arguments: widget.userId);
-        break;
-      case 1:
-        Navigator.pushNamed(context, '/profile', arguments: widget.userId);
-        break;
-      case 2:
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Ruta no válida")),
-        );
-    }
-
-    setState(() {
-      _selectedIndex = index;
-    });
   }
 
   Future<void> _abonarDeuda(String debtorId, double montoActual, String nombreDeudor, BuildContext context) async {
@@ -381,24 +356,6 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
               );
             },
             child: const Icon(Icons.history),
-          ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Inicio',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Deudores',
           ),
         ],
       ),
