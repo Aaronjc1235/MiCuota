@@ -34,6 +34,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
     }
 
     try {
+      // Agrega la nueva deuda a la subcolección "debts"
       await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.userId)
@@ -45,6 +46,11 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
         'totalPagadas': int.parse(totalPagadas),
         'fechaDePago': _fechaDePago?.toIso8601String(),
         'fechaCreacion': Timestamp.now(),
+      });
+
+      // Incrementa el contador de deudas en el documento principal del usuario
+      await FirebaseFirestore.instance.collection('users').doc(widget.userId).update({
+        'debtCount': FieldValue.increment(1),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

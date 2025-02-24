@@ -43,6 +43,7 @@ class _AddDebtorScreenState extends State<AddDebtorScreen> {
         return;
       }
 
+      // Agregar deudor a la subcolección "debtors"
       await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.userId)
@@ -51,6 +52,11 @@ class _AddDebtorScreenState extends State<AddDebtorScreen> {
         'nombre': name,
         'monto': amount,
         'fecha': Timestamp.now(),
+      });
+
+      // Incrementar el contador de deudores en el documento principal del usuario
+      await FirebaseFirestore.instance.collection('users').doc(widget.userId).update({
+        'debtorsCount': FieldValue.increment(1),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,35 +84,98 @@ class _AddDebtorScreenState extends State<AddDebtorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF1B1919),
       body: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 16.0),
+        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1CC0C6),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 20,
+                    child: const Text(
+                      "Agregar Deudor",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 44,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    child: Image.asset(
+                      'lib/assets/images/3dicons-dollar-iso-color.png',
+                      height: 400,
+                      alignment: Alignment.bottomCenter,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
                   labelText: "Nombre del Deudor",
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white70),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF0D7377)),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
               TextField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
                   labelText: "Monto de la Deuda",
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white70),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF0D7377)),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
                 ),
                 onChanged: (value) => _formatAmount(),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               Center(
                 child: ElevatedButton(
                   onPressed: _addDebtor,
-                  child: const Text("Agregar"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1CC0C6),
+                    padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                  ),
+                  child: const Text(
+                    "Agregar",
+                    style: TextStyle(fontSize: 16.0, color: Colors.white),
+                  ),
                 ),
               ),
             ],

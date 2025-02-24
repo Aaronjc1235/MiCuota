@@ -153,6 +153,20 @@ class PaidDebtorsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF1B1919),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1CC0C6),
+        title: const Text(
+          "Deudores Pagados",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -162,46 +176,84 @@ class PaidDebtorsScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
+            return Center(
+              child: Text(
+                "Error: ${snapshot.error}",
+                style: const TextStyle(color: Colors.white),
+              ),
+            );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            );
           }
 
           final docs = snapshot.data?.docs ?? [];
           if (docs.isEmpty) {
-            return const Center(child: Text("No hay deudores pagados."));
+            return const Center(
+              child: Text(
+                "No hay deudores pagados.",
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final pagado = docs[index].data() as Map<String, dynamic>;
               final debtorId = docs[index].id;
 
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                child: ListTile(
-                  title: Text(
-                    pagado['nombre'] ?? "Sin nombre",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
+                elevation: 8,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0D7377), Color(0xFF1CC0C6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(15.0),
                   ),
-                  subtitle: Text(
-                    "Fecha: ${_formatFecha(pagado['fecha'])}",
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.history, color: Colors.blue),
-                        onPressed: () => _mostrarHistorialAbonos(context, debtorId, pagado['nombre']),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    title: Text(
+                      pagado['nombre'] ?? "Sin nombre",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _eliminarHistorialAbonos(context, debtorId),
+                    ),
+                    subtitle: Text(
+                      "Fecha: ${_formatFecha(pagado['fecha'])}",
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
                       ),
-                    ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.history, color: Colors.white),
+                          onPressed: () => _mostrarHistorialAbonos(context, debtorId, pagado['nombre']),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _eliminarHistorialAbonos(context, debtorId),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

@@ -264,77 +264,151 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Deudores"),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(widget.userId)
-            .collection('debtors')
-            .orderBy('nombre') // Orden alfabético por nombre
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final docs = snapshot.data?.docs ?? [];
-          if (docs.isEmpty) {
-            return const Center(child: Text("No hay deudores registrados."));
-          }
-
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final deudor = docs[index].data() as Map<String, dynamic>;
-              final debtorId = docs[index].id;
-              final double monto = double.tryParse(deudor['monto'].toString()) ?? 0.0;
-              final double montoTotalPagado = deudor['montoTotalPagado'] ?? 0.0;
-
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                child: ListTile(
-                  onTap: () => _mostrarHistorialAbonos(debtorId, deudor['nombre'] ?? "Sin nombre"),
-                  title: Text(
-                    deudor['nombre'] ?? "Sin nombre",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Monto a deber: \$${NumberFormat("#,##0", "es_CL").format(monto)}",
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1B1919), Color(0xFF1B1919)],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                child: const Row(
+                  children: [
+                    Text(
+                      "Deudores",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 8), // Espacio entre los textos
-                      Text(
-                        "Total Pagado: \$${NumberFormat("#,##0", "es_CL").format(montoTotalPagado)}",
-                      ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.attach_money, color: Colors.green),
-                        onPressed: () => _abonarDeuda(debtorId, monto, deudor['nombre'], context),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              );
-            },
-          );
-        },
+              ),
+              const Divider(color: Color(0xFF0D7377), height: 1),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(widget.userId)
+                      .collection('debtors')
+                      .orderBy('nombre')
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          "Error: ${snapshot.error}",
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      );
+                    }
+
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          "No hay deudores registrados.",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final deudor = docs[index].data() as Map<String, dynamic>;
+                        final debtorId = docs[index].id;
+                        final double monto = double.tryParse(deudor['monto'].toString()) ?? 0.0;
+                        final double montoTotalPagado = deudor['montoTotalPagado'] ?? 0.0;
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15.0),
+                          ),
+                          elevation: 8,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0D7377), Color(0xFF1CC0C6)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(15.0),
+                            ),
+                            child: ListTile(
+                              onTap: () => _mostrarHistorialAbonos(debtorId, deudor['nombre'] ?? "Sin nombre"),
+                              contentPadding: const EdgeInsets.all(16),
+                              title: Text(
+                                deudor['nombre'] ?? "Sin nombre",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Monto a deber: \$${NumberFormat("#,##0", "es_CL").format(monto)}",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Total Pagado: \$${NumberFormat("#,##0", "es_CL").format(montoTotalPagado)}",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.attach_money,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                                onPressed: () => _abonarDeuda(debtorId, monto, deudor['nombre'], context),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
+            heroTag: "btn1",
+            backgroundColor: const Color(0xFF1CC0C6),
+            child: const Icon(Icons.add),
             onPressed: () {
               Navigator.push(
                 context,
@@ -343,10 +417,12 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
                 ),
               );
             },
-            child: const Icon(Icons.add),
           ),
           const SizedBox(width: 16),
           FloatingActionButton(
+            heroTag: "btn2",
+            backgroundColor: const Color(0xFF1CC0C6),
+            child: const Icon(Icons.history),
             onPressed: () {
               Navigator.push(
                 context,
@@ -355,7 +431,6 @@ class _DebtorsScreenState extends State<DebtorsScreen> {
                 ),
               );
             },
-            child: const Icon(Icons.history),
           ),
         ],
       ),

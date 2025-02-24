@@ -48,6 +48,7 @@ flutter:
     - lib/assets/images/avatar22.png
     - lib/assets/images/avatar23.png
     - lib/assets/images/3dicons-wallet-iso-color.png
+    - lib/assets/images/3dicons-dollar-iso-color.png
     - lib/assets/images/calendar.png
 
   fonts:
